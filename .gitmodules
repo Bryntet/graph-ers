@@ -1,3 +1,3 @@
 [submodule "egui_autocomplete"]
-	path = egui_autocomplete
-	url = git@github.com:Bryntet/egui_autocomplete.git
+    path = egui_autocomplete
+    url = https://github.com/Bryntet/egui_autocomplete
