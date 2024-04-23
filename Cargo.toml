@@ -1,0 +1,15 @@
+[package]
+name = "graph-ers"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.27.2"
+egui_autocomplete = {path = "egui_autocomplete"}
+egui_plot = "0.27.2"
+env_logger = "0.11.3"
+itertools = "0.12.1"
+prse = "1.2.1"
+rand = "0.8.5"
+regex = "1.10.4"
+log = "0.4.21"
