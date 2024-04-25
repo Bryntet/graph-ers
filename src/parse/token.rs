@@ -213,7 +213,7 @@ impl TokenQueue {
     fn get_next_number(chars: &mut Peekable<Chars>, current_char: &char) -> Option<f64> {
         if current_char.is_ascii_digit() {
             let mut num_buffer = String::from(current_char.to_owned());
-            while chars.peek().is_some_and(|c|c.is_ascii_digit()) {
+            while chars.peek().is_some_and(|c|c.is_ascii_digit()||c==&'.') {
                 num_buffer.push(chars.next().unwrap())
             }
             Some(num_buffer.parse().unwrap())

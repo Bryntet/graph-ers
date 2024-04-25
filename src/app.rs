@@ -1,15 +1,26 @@
 use std::collections::BTreeSet;
 use eframe::egui;
-use eframe::egui::{ Ui};
+use eframe::egui::{Key, Ui, Vec2, Vec2b};
 use egui_autocomplete::AutoCompleteTextEdit;
-use egui_plot::{Legend, Plot, PlotPoints, Points};
+use egui_plot::{Legend, Line, Plot, PlotBounds, PlotPoint, PlotPoints, Points};
 use crate::helpers::random_data;
+use crate::parse::Function;
 
 #[derive(Default)]
 pub struct GraphErBrain {
     graph_points: Vec<[f64; 2]>,
-    input: AutoCompleteExample
+    input: AutoCompleteExample,
+    zoom: Zoom,
+    
 }
+#[derive(Default)]
+enum Zoom {
+    Increase,
+    Decrease,
+    #[default]
+    Same
+}
+
 
 impl GraphErBrain {
     pub fn new() -> Self {
@@ -56,8 +67,38 @@ impl eframe::App for GraphErBrain {
             let my_plot = Plot::new("Grafen!").legend(Legend::default());
 
             let inner = my_plot.show(ui, |plot_ui| {
-                plot_ui.points(Points::new(PlotPoints::from(self.graph_points.clone())).name("curve"));
+                
+                ctx.input(|input| {
+                    if input.key_pressed(Key::Plus) {
+                        self.zoom = Zoom::Increase
+                    } else if input.key_pressed(Key::Minus) {
+                        self.zoom = Zoom::Decrease
+                    }
+                });
+                let min_x = plot_ui.plot_bounds().min()[0];
+                let max_x = plot_ui.plot_bounds().max()[0];
+                /*let sin: PlotPoints = (0..1000).map(|i| {
+                    let x = i as f64 * 0.01;
+                    [x, x.sin()]
+                }).collect();*/
+                plot_ui.set_auto_bounds(Vec2b::new(false,false));
+                let test = plot_ui.plot_bounds().max();
+                let test1 = plot_ui.plot_bounds().min();
+                
+                let zoom_factor = match self.zoom {
+                    Zoom::Increase => Vec2::new(2.,2.),
+                    Zoom::Decrease => Vec2::new(0.5,0.5),
+                    Zoom::Same => Vec2::new(1.,1.)
+                };
+                plot_ui.zoom_bounds(zoom_factor, PlotPoint::new((test1[0] + test[0]) / 2., (test1[1] + test[1]) / 2.));
+                self.zoom = Zoom::Same;
+                    
+                
+                plot_ui.line(Line::new(Function::new(1.,2.).into_plot_points(min_x+0.001,max_x-0.001)).name("Test"));
+                //plot_ui.line(Line::new(sin).name("A"))
             });
+            
+            
 
             // Remember the position of the plot
             plot_rect = Some(inner.response.rect);

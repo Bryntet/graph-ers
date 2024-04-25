@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 eframe = "0.27.2"
 egui_autocomplete = {path = "egui_autocomplete"}
-egui_plot = "0.27.2"
+egui_plot = {version =  "0.27.2", features = [] }
 env_logger = "0.11.3"
 itertools = "0.12.1"
 prse = "1.2.1"
