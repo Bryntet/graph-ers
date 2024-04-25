@@ -11,7 +11,7 @@ pub struct GraphErBrain {
     graph_points: Vec<[f64; 2]>,
     input: AutoCompleteExample,
     zoom: Zoom,
-    
+    text_focused: bool,
 }
 #[derive(Default)]
 enum Zoom {
@@ -49,9 +49,11 @@ impl eframe::App for GraphErBrain {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let mut plot_rect = None;
 
-        egui::SidePanel::left("side_panel").show(ctx, |ui| {
-            ui.label("Enter your text:");
+        let mut space_to_the_left_of_graph = 0.;
 
+        egui::SidePanel::left("math_input").show(ctx, |ui| {
+            ui.label("Enter your text:");
+            space_to_the_left_of_graph = ui.available_width();
             ui.allocate_ui_with_layout(
                 ui.available_size(),
                 egui::Layout::top_down(egui::Align::Max),
@@ -60,21 +62,23 @@ impl eframe::App for GraphErBrain {
                 },
             );
         });
-        
-        
+        let latest_pointer_x_pos = ctx.pointer_latest_pos().unwrap_or_default().x;
 
+        let is_right_of_math_input = space_to_the_left_of_graph<latest_pointer_x_pos;
         egui::CentralPanel::default().show(ctx, |ui| {
             let my_plot = Plot::new("Grafen!").legend(Legend::default());
+            
 
             let inner = my_plot.show(ui, |plot_ui| {
-                
-                ctx.input(|input| {
-                    if input.key_pressed(Key::Plus) {
-                        self.zoom = Zoom::Increase
-                    } else if input.key_pressed(Key::Minus) {
-                        self.zoom = Zoom::Decrease
-                    }
-                });
+                if is_right_of_math_input {
+                    ctx.input(|input| {
+                        if input.key_pressed(Key::Plus) {
+                            self.zoom = Zoom::Increase
+                        } else if input.key_pressed(Key::Minus) {
+                            self.zoom = Zoom::Decrease
+                        }
+                    })
+                }
                 let min_x = plot_ui.plot_bounds().min()[0];
                 let max_x = plot_ui.plot_bounds().max()[0];
                 /*let sin: PlotPoints = (0..1000).map(|i| {
