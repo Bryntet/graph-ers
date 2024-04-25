@@ -8,11 +8,13 @@ use crate::parse::Function;
 
 #[derive(Default)]
 pub struct GraphErBrain {
-    graph_points: Vec<[f64; 2]>,
     input: AutoCompleteExample,
     zoom: Zoom,
     text_focused: bool,
+    function_thing: String
 }
+
+
 #[derive(Default)]
 enum Zoom {
     Increase,
@@ -25,7 +27,6 @@ enum Zoom {
 impl GraphErBrain {
     pub fn new() -> Self {
         Self {
-            graph_points: random_data(),
             ..Default::default()
         }
     }
@@ -59,6 +60,7 @@ impl eframe::App for GraphErBrain {
                 egui::Layout::top_down(egui::Align::Max),
                 |ui| {
                     self.input.update(ctx, ui, true);
+                    ui.text_edit_singleline(&mut self.function_thing)
                 },
             );
         });
@@ -96,9 +98,12 @@ impl eframe::App for GraphErBrain {
                 };
                 plot_ui.zoom_bounds(zoom_factor, PlotPoint::new((test1[0] + test[0]) / 2., (test1[1] + test[1]) / 2.));
                 self.zoom = Zoom::Same;
-                    
+
+                if let Ok(func) = Function::new(&self.function_thing.trim().to_lowercase()) {
+
+                    plot_ui.line(Line::new(func.into_plot_points(min_x+0.001, max_x-0.001)).name("Test"));
+                }
                 
-                plot_ui.line(Line::new(Function::new(1.,2.).into_plot_points(min_x+0.001,max_x-0.001)).name("Test"));
                 //plot_ui.line(Line::new(sin).name("A"))
             });
             
