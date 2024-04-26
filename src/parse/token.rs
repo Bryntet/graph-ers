@@ -2,10 +2,12 @@ use std::ascii::Char;
 use std::collections::VecDeque;
 use std::iter::Peekable;
 use std::str::Chars;
+use std::collections::HashMap;
 use itertools::Itertools;
 use prse::{Parse, try_parse};
 use regex::Regex;
 use log::warn;
+use crate::parse::math_functions::ParseError;
 
 pub(crate) trait Operation {
     fn do_operation(&self) -> f64;
@@ -61,6 +63,18 @@ impl Operation for Divide {
         Token::Divide
     }
 }
+
+struct Pow(f64, f64);
+
+impl Operation for Pow {
+    fn do_operation(&self) -> f64 {
+        self.0.powf(self.1)
+    }
+    fn operation_type(&self) -> Token {
+        Token::Pow
+    }
+}
+
 struct TestFunction(f64,f64);
 impl Operation for TestFunction {
     fn do_operation(&self) -> f64 {
@@ -83,6 +97,8 @@ pub(crate) enum Token {
     Multiply,
     #[prse = "/"]
     Divide,
+    #[prse = "^"]
+    Pow,
     #[prse = "test({a},{b})"]
     TestFunction{
         a: f64,
@@ -107,26 +123,25 @@ impl Token {
         try_parse!(&input,"{}").ok()
     }
 
-
-    fn into_operation(self, num1:f64,num2: f64) -> Box<dyn Operation> {
+    fn to_operation(&self, num1:f64, num2: f64) -> Box<dyn Operation> {
         let (n1,n2) = (num1,num2);
         match self {
             Self::Add => Box::new(Add(n1,n2)),
             Self::Subtract => Box::new(Subtract(n1,n2)),
             Self::Multiply => Box::new(Multiply(n1,n2)),
             Self::Divide => Box::new(Divide(n1,n2)),
-            Self::TestFunction{a,b} => Box::new(TestFunction(a,b))
+            Self::Pow => Box::new(Pow(n1,n2)),
+            Self::TestFunction{a,b} => Box::new(TestFunction(*a,*b))
         }
     }
-
-
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TokenQueue(Vec<QueueItem>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum QueueItem {
+    Variable(String),
     Number(f64),
     Token(Token),
     Queue(TokenQueue)
@@ -151,14 +166,14 @@ impl From<Token> for QueueItem {
 }
 
 impl TokenQueue {
-    pub fn push(&mut self, item: QueueItem) {
+    fn push(&mut self, item: QueueItem) {
         self.0.push(item)
     }
 
-    pub fn new(input: &str) -> Self {
+    pub fn new(input: &str, variables: &[String]) -> Result<Self, ParseError> {
         let mut s = Self(Vec::new());
         
-        let mut operation_buff = String::new();
+        let mut string_buff = String::new();
         let input = Self::add_parenthesis(&input.trim().replace(' ',""));
 
         let mut chars = input.chars().peekable();
@@ -181,25 +196,38 @@ impl TokenQueue {
                     }
                 }
                 buffer.pop();
-                s.push(Self::new(&buffer).into());
+                s.push(Self::new(&buffer, variables)?.into());
             }
             if let Some(number) = Self::get_next_number(&mut chars, &c) {
                 s.push(number.into())
             }
-            match Token::new(c.to_string().as_str()) {
-                Some(op) => {
-                    s.push(op.into())
-                },
-                None => {
-                    operation_buff.push(c);
-                    if let Some(op) = Token::new(&operation_buff) {
+            if let Some(op) = Token::new(&c.to_string()) {
+                s.push(op.into());
+            }
+            else if c.is_alphabetic() {
+                dbg!(c);
+                string_buff.push(c);
+                while variables.iter().any(|var|var.starts_with(&string_buff)) {
+                    if let Some(op) = Token::new(&string_buff) {
                         s.push(op.into());
-                        operation_buff.clear();
+                        string_buff.clear();
+                        break;
+                    } else if variables.iter().any(|var|var.eq(&string_buff)) {
+                        s.push(QueueItem::Variable(string_buff.clone()));
+                        dbg!(&string_buff);
+                        break;
+                    } else {
+                        dbg!(&string_buff);
+                        string_buff.push(chars.next().ok_or(ParseError::UnableToFind(format!("Variable {}", string_buff)))?);
+                        dbg!(&string_buff);
                     }
                 }
+                string_buff.clear();
+                
+                
             }
         }
-        s
+        Ok(s)
     }
 
     fn add_parenthesis(input: &str) -> String {
@@ -221,51 +249,55 @@ impl TokenQueue {
             None
         }
     }
-    pub fn calculate(self) -> Option<f64> {
+    pub fn calculate(&self, var_map: &HashMap<String,f64>) -> Result<f64, ParseError> {
         let mut previous_num = 0.;
-        let mut list = self.0.into_iter().peekable();
+        let mut list = self.0.iter().peekable();
 
+        
         while let Some(item) = list.next() {
             match item {
-                QueueItem::Number(num) => {
-                    previous_num = num
+                QueueItem::Variable(var_name) => {
+                    let var = var_map.get(var_name).ok_or(ParseError::UnableToFind(format!("variable \"{}\"",var_name)))?;
+                    if previous_num == 0. {
+                        previous_num = *var;
+                    } else {
+                        previous_num *= var
+                    }
                 }
-                QueueItem::Token(t) => {
-                    match list.next() {
-                        Some(QueueItem::Token(..)) => {
-                            warn!("error here");
-                            return None;
-                        },
-                        Some(QueueItem::Number(num2)) => {
-                            previous_num = t.into_operation(previous_num,num2).do_operation();
-                        }
-                        Some(QueueItem::Queue(q)) => {
-                            if let Some(num) = q.calculate() {
-                                previous_num = t.into_operation(previous_num,num).do_operation()
-                            } else {
-                                warn!("error!");
-                                return None;
+                QueueItem::Number(num) => {
+                    previous_num = *num
+                }
+                QueueItem::Token(token) => {
+                    match list.next(){
+                        Some(item) => match item {
+                            QueueItem::Token(..) => {
+                                return Err(ParseError::InvalidTokenPosition);
+                            },
+                            QueueItem::Variable(var_name) => {
+                                previous_num = token.to_operation(previous_num, *var_map.get(var_name).ok_or(ParseError::UnableToFind(format!("variable \"{}\"",var_name)))?).do_operation();
+                            }
+                            QueueItem::Number(num2) => {
+                                previous_num = token.to_operation(previous_num, *num2).do_operation();
+                            }
+                            QueueItem::Queue(inner_queue) => {
+                                previous_num = token.to_operation(previous_num, inner_queue.calculate(var_map)?).do_operation()
                             }
                         }
-                        None => ()
+                        None => Err(ParseError::UnableToParse)?
                     }
-                }
-                QueueItem::Queue(q) => {
-                    if let Some(num) = q.calculate() {
-                        previous_num = num
-                    } else {
-                        warn!("error here!");
-                        return None;
                     }
-                }
+                
+                QueueItem::Queue(q) => previous_num = q.calculate(var_map)?
+                
             }
         }
-        Some(previous_num)
+        Ok(previous_num)
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
     use crate::parse::TokenQueue;
 
     #[test]
@@ -278,8 +310,8 @@ mod test {
 
     #[test]
     fn test_queue() {
-        let q = TokenQueue::new("12+20*10");
+        let q = TokenQueue::new("t^2", &["t".to_string()]).unwrap();
         dbg!(&q);
-        dbg!(q.calculate());
+        dbg!(q.calculate(&HashMap::from([("t".to_string(),1.)])));
     }
 }

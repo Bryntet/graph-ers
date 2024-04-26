@@ -1,6 +1,6 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use eframe::egui;
-use eframe::egui::{Key, Ui, Vec2, Vec2b};
+use eframe::egui::{Color32, Key, RichText, Ui, Vec2, Vec2b, WidgetText};
 use egui_autocomplete::AutoCompleteTextEdit;
 use egui_plot::{Legend, Line, Plot, PlotBounds, PlotPoint, PlotPoints, Points};
 use crate::helpers::random_data;
@@ -11,7 +11,8 @@ pub struct GraphErBrain {
     input: AutoCompleteExample,
     zoom: Zoom,
     text_focused: bool,
-    function_thing: String
+    function_thing: String,
+    function_error: Option<String>
 }
 
 
@@ -60,7 +61,10 @@ impl eframe::App for GraphErBrain {
                 egui::Layout::top_down(egui::Align::Max),
                 |ui| {
                     self.input.update(ctx, ui, true);
-                    ui.text_edit_singleline(&mut self.function_thing)
+                    ui.text_edit_singleline(&mut self.function_thing);
+                    if let Some(error) = &self.function_error {
+                        ui.label(RichText::new(error).color(Color32::RED));
+                    }
                 },
             );
         });
@@ -99,15 +103,25 @@ impl eframe::App for GraphErBrain {
                 plot_ui.zoom_bounds(zoom_factor, PlotPoint::new((test1[0] + test[0]) / 2., (test1[1] + test[1]) / 2.));
                 self.zoom = Zoom::Same;
 
-                if let Ok(func) = Function::new(&self.function_thing.trim().to_lowercase()) {
-
-                    plot_ui.line(Line::new(func.into_plot_points(min_x+0.001, max_x-0.001)).name("Test"));
+                match Function::try_from(self.function_thing.trim().to_lowercase()) {
+                    Ok(func) => { 
+                        match func.into_plot_points(min_x + 0.001, max_x - 0.001) {
+                            Ok(points) => {
+                                plot_ui.line(Line::new(points).name("Test"));
+                                self.function_error = None;
+                            }
+                            Err(e) => {
+                                self.function_error = Some(e.to_string())
+                            }
+                        }
+                        
+                    }
+                    Err(e) => self.function_error = Some(e.to_string())
                 }
-                
-                //plot_ui.line(Line::new(sin).name("A"))
+
             });
             
-            
+
 
             // Remember the position of the plot
             plot_rect = Some(inner.response.rect);
@@ -119,12 +133,13 @@ struct AutoCompleteExample {
     multi_input: String,
     search_field: String,
     max_suggestions:usize,
-    result: f64
+    result: f64,
+    error: Option<String>
 }
 
 impl Default for AutoCompleteExample {
     fn default() -> Self {
-        Self {multi_input: STARTER_LIST.to_string(), search_field: "".to_string(), max_suggestions: 10,result:0.}
+        Self {multi_input: STARTER_LIST.to_string(), search_field: "".to_string(), max_suggestions: 10,result:0., error: None }
     }
 }
 
@@ -142,10 +157,16 @@ impl AutoCompleteExample {
                 .max_suggestions(self.max_suggestions)
                 .highlight_matches(highlight_matches),
         );
-        let operation_queue = crate::parse::TokenQueue::new(&self.search_field);
-        if let Some(result) = operation_queue.calculate() {
-            self.result = result
+        match crate::parse::TokenQueue::new(&self.search_field, &vec![]) {
+            Ok(operation_queue) => {
+                if let Ok(result) = operation_queue.calculate(&HashMap::<String, f64>::new()) {
+                    self.result = result;
+                    self.error = None;
+                }
+            },
+            Err(e) => self.error= Some(e.to_string())
         }
+        
         ui.separator();
         // Display the result next to the input field
         ui.label(format!("Result: {}", self.result));
