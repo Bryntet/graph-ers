@@ -11,8 +11,3 @@ use app::GraphErBrain;
 fn main() -> Result<(), eframe::Error> {
     GraphErBrain::start()
 }
-
-
-
-
-

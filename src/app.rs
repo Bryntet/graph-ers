@@ -1,10 +1,10 @@
-use std::collections::{BTreeSet, HashMap};
+use crate::helpers::random_data;
+use crate::parse::Function;
 use eframe::egui;
 use eframe::egui::{Color32, Key, RichText, Ui, Vec2, Vec2b, WidgetText};
 use egui_autocomplete::AutoCompleteTextEdit;
 use egui_plot::{Legend, Line, Plot, PlotBounds, PlotPoint, PlotPoints, Points};
-use crate::helpers::random_data;
-use crate::parse::Function;
+use std::collections::{BTreeSet, HashMap};
 
 #[derive(Default)]
 pub struct GraphErBrain {
@@ -12,18 +12,16 @@ pub struct GraphErBrain {
     zoom: Zoom,
     text_focused: bool,
     function_thing: String,
-    function_error: Option<String>
+    function_error: Option<String>,
 }
-
 
 #[derive(Default)]
 enum Zoom {
     Increase,
     Decrease,
     #[default]
-    Same
+    Same,
 }
-
 
 impl GraphErBrain {
     pub fn new() -> Self {
@@ -70,10 +68,9 @@ impl eframe::App for GraphErBrain {
         });
         let latest_pointer_x_pos = ctx.pointer_latest_pos().unwrap_or_default().x;
 
-        let is_right_of_math_input = space_to_the_left_of_graph<latest_pointer_x_pos;
+        let is_right_of_math_input = space_to_the_left_of_graph < latest_pointer_x_pos;
         egui::CentralPanel::default().show(ctx, |ui| {
             let my_plot = Plot::new("Grafen!").legend(Legend::default());
-            
 
             let inner = my_plot.show(ui, |plot_ui| {
                 if is_right_of_math_input {
@@ -91,37 +88,32 @@ impl eframe::App for GraphErBrain {
                     let x = i as f64 * 0.01;
                     [x, x.sin()]
                 }).collect();*/
-                plot_ui.set_auto_bounds(Vec2b::new(false,false));
+                plot_ui.set_auto_bounds(Vec2b::new(false, false));
                 let test = plot_ui.plot_bounds().max();
                 let test1 = plot_ui.plot_bounds().min();
-                
+
                 let zoom_factor = match self.zoom {
-                    Zoom::Increase => Vec2::new(2.,2.),
-                    Zoom::Decrease => Vec2::new(0.5,0.5),
-                    Zoom::Same => Vec2::new(1.,1.)
+                    Zoom::Increase => Vec2::new(2., 2.),
+                    Zoom::Decrease => Vec2::new(0.5, 0.5),
+                    Zoom::Same => Vec2::new(1., 1.),
                 };
-                plot_ui.zoom_bounds(zoom_factor, PlotPoint::new((test1[0] + test[0]) / 2., (test1[1] + test[1]) / 2.));
+                plot_ui.zoom_bounds(
+                    zoom_factor,
+                    PlotPoint::new((test1[0] + test[0]) / 2., (test1[1] + test[1]) / 2.),
+                );
                 self.zoom = Zoom::Same;
 
                 match Function::try_from(self.function_thing.trim().to_lowercase()) {
-                    Ok(func) => { 
-                        match func.into_plot_points(min_x + 0.001, max_x - 0.001) {
-                            Ok(points) => {
-                                plot_ui.line(Line::new(points).name("Test"));
-                                self.function_error = None;
-                            }
-                            Err(e) => {
-                                self.function_error = Some(e.to_string())
-                            }
+                    Ok(func) => match func.into_plot_points(min_x + 0.001, max_x - 0.001) {
+                        Ok(points) => {
+                            plot_ui.line(Line::new(points).name("Test"));
+                            self.function_error = None;
                         }
-                        
-                    }
-                    Err(e) => self.function_error = Some(e.to_string())
+                        Err(e) => self.function_error = Some(e.to_string()),
+                    },
+                    Err(e) => self.function_error = Some(e.to_string()),
                 }
-
             });
-            
-
 
             // Remember the position of the plot
             plot_rect = Some(inner.response.rect);
@@ -132,26 +124,35 @@ impl eframe::App for GraphErBrain {
 struct AutoCompleteExample {
     multi_input: String,
     search_field: String,
-    max_suggestions:usize,
+    max_suggestions: usize,
     result: f64,
-    error: Option<String>
+    error: Option<String>,
 }
 
 impl Default for AutoCompleteExample {
     fn default() -> Self {
-        Self {multi_input: STARTER_LIST.to_string(), search_field: "".to_string(), max_suggestions: 10,result:0., error: None }
+        Self {
+            multi_input: STARTER_LIST.to_string(),
+            search_field: "".to_string(),
+            max_suggestions: 10,
+            result: 0.,
+            error: None,
+        }
     }
 }
 
 impl AutoCompleteExample {
-    fn update(
-        &mut self,
-        _ctx: &egui::Context,
-        ui: &mut Ui,
-        highlight_matches: bool,
-    ) {
+    fn update(&mut self, _ctx: &egui::Context, ui: &mut Ui, highlight_matches: bool) {
         let inputs = self.multi_input.lines().collect::<BTreeSet<_>>();
-        self.search_field=self.search_field.chars().filter(|c|c.is_ascii_digit() || c.is_whitespace() || ['-','+','/','*','(',')'].contains(c)).collect();
+        self.search_field = self
+            .search_field
+            .chars()
+            .filter(|c| {
+                c.is_ascii_digit()
+                    || c.is_whitespace()
+                    || ['-', '+', '/', '*', '(', ')'].contains(c)
+            })
+            .collect();
         ui.add(
             AutoCompleteTextEdit::new(&mut self.search_field, inputs)
                 .max_suggestions(self.max_suggestions)
@@ -163,10 +164,10 @@ impl AutoCompleteExample {
                     self.result = result;
                     self.error = None;
                 }
-            },
-            Err(e) => self.error= Some(e.to_string())
+            }
+            Err(e) => self.error = Some(e.to_string()),
         }
-        
+
         ui.separator();
         // Display the result next to the input field
         ui.label(format!("Result: {}", self.result));
