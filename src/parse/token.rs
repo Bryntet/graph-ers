@@ -227,10 +227,11 @@ impl TokenQueue {
 
     fn add_parenthesis(input: &str) -> String {
         if !(input.contains('+') || input.contains('-')) {
-            return input.to_string();
+            input.to_string()
+        } else {
+            let re = Regex::new(r#"((\d+\s*[*/])+\d+)"#).unwrap();
+            re.replace_all(input, "($1)").to_string()
         }
-        let re = Regex::new(r#"((\d+\s*[*/])+\d+)"#).unwrap();
-        re.replace_all(input, "($1)").to_string()
     }
 
     fn get_next_number(chars: &mut Peekable<Chars>, current_char: &char) -> Option<f64> {
