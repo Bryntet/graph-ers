@@ -222,10 +222,10 @@ impl TokenQueue {
     }
 
     fn add_parenthesis(input: &str) -> String {
-        if !(input.contains('+') || input.contains('-')) {
+        if !(input.contains('+') || input.contains('-')) || input.contains('^') {
             input.to_string()
         } else {
-            let re = Regex::new(r#"((\d+\s*[*/])+\d+)"#).unwrap();
+            let re = Regex::new(r#"((\d+\s*[*/^])+\d+)"#).unwrap();
             re.replace_all(input, "($1)").to_string()
         }
     }
