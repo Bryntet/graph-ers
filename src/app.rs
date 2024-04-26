@@ -104,9 +104,9 @@ impl eframe::App for GraphErBrain {
                 self.zoom = Zoom::Same;
 
                 match Function::try_from(self.function_thing.trim().to_lowercase()) {
-                    Ok(func) => match func.into_plot_points(min_x + 0.001, max_x - 0.001) {
+                    Ok(mut func) => match func.plot_points(min_x + 0.001, max_x - 0.001) {
                         Ok(points) => {
-                            plot_ui.line(Line::new(points).name("Test"));
+                            plot_ui.line(Line::new(points).name(func.name));
                             self.function_error = None;
                         }
                         Err(e) => self.function_error = Some(e.to_string()),

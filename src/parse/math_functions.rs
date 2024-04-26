@@ -19,7 +19,7 @@ pub enum ParseError {
 }
 #[derive(Debug, PartialEq)]
 pub struct Function {
-    name: String,
+    pub name: String,
     x_value: f64,
     internal_offset: f64,
     test_ex: TokenQueue,
@@ -92,7 +92,7 @@ impl Function {
         })
     }
 
-    pub fn into_plot_points(mut self, min_x: f64, max_x: f64) -> Result<PlotPoints, ParseError> {
+    pub fn plot_points(&mut self, min_x: f64, max_x: f64) -> Result<PlotPoints, ParseError> {
         let mut points = Vec::new();
 
         self.internal_offset = (max_x - min_x) / 2000.;
