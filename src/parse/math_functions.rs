@@ -81,7 +81,6 @@ impl Function {
             .as_str()
             .to_string();
         let test_ex = TokenQueue::new(&ex, &function_variables)?;
-        dbg!(&test_ex);
 
         Ok(Function {
             name: function_name.to_string(),

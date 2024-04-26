@@ -199,7 +199,6 @@ impl TokenQueue {
             if let Some(op) = Token::new(&c.to_string()) {
                 s.push(op.into());
             } else if c.is_alphabetic() {
-                dbg!(c);
                 string_buff.push(c);
                 while variables.iter().any(|var| var.starts_with(&string_buff)) {
                     if let Some(op) = Token::new(&string_buff) {
@@ -208,15 +207,12 @@ impl TokenQueue {
                         break;
                     } else if variables.iter().any(|var| var.eq(&string_buff)) {
                         s.push(QueueItem::Variable(string_buff.clone()));
-                        dbg!(&string_buff);
                         break;
                     } else {
-                        dbg!(&string_buff);
                         string_buff.push(chars.next().ok_or(ParseError::UnableToFind(format!(
                             "Variable {}",
                             string_buff
                         )))?);
-                        dbg!(&string_buff);
                     }
                 }
                 string_buff.clear();
