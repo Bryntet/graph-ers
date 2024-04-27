@@ -167,9 +167,11 @@ impl TokenQueue {
 
     pub fn new(input: &str, variables: &[String]) -> Result<Self, ParseError> {
         let mut s = Self(Vec::new());
-
+        let input = input.trim().replace(' ',"").to_lowercase();
+        
+        
         let mut string_buff = String::new();
-        let input = Self::add_parenthesis(&input.trim().replace(' ', ""));
+        let input = Self::add_parenthesis(&input);
 
         let mut chars = input.chars().peekable();
         while let Some(c) = chars.next() {
@@ -220,12 +222,24 @@ impl TokenQueue {
         }
         Ok(s)
     }
-
     fn add_parenthesis(input: &str) -> String {
-        if !(input.contains('+') || input.contains('-')) || input.contains('^') {
+        Self::add_parenthesis_multiplication(&dbg!(Self::add_parenthesis_exponent(input)))
+    }
+
+    fn add_parenthesis_exponent(input: &str) -> String {
+        if !input.contains(['+','-','*','/']) {
+           input.to_string()
+        } else {
+            let re = Regex::new(r#"(\d*[a-z]*\s*^\d*[a-z]*)"#).expect("Regex is valid");
+            re.replace_all(input,"($1)").to_string()
+        }
+    }
+
+    fn add_parenthesis_multiplication(input: &str) -> String {
+        if !input.contains(['+','-']) {
             input.to_string()
         } else {
-            let re = Regex::new(r#"((\d+\s*[*/^])+\d+)"#).unwrap();
+            let re = Regex::new(r#"(\d*[a-z]*\s*[*/]\d*[a-z]*)"#).unwrap();
             re.replace_all(input, "($1)").to_string()
         }
     }
@@ -305,11 +319,11 @@ mod test {
 
     #[test]
     fn test_add_parenthesis() {
-        assert_eq!(super::TokenQueue::add_parenthesis("1*1"), "(1*1)");
-        assert_eq!(super::TokenQueue::add_parenthesis("1/1"), "(1/1)");
-        assert_eq!(super::TokenQueue::add_parenthesis("1*1*1"), "(1*1*1)");
+        assert_eq!(super::TokenQueue::add_parenthesis_multiplication("1*1"), "(1*1)");
+        assert_eq!(super::TokenQueue::add_parenthesis_multiplication("1/1"), "(1/1)");
+        assert_eq!(super::TokenQueue::add_parenthesis_multiplication("1*1*1"), "(1*1*1)");
         assert_eq!(
-            super::TokenQueue::add_parenthesis("1*1/20+12-17*20"),
+            super::TokenQueue::add_parenthesis_multiplication("1*1/20+12-17*20"),
             "(1*1/20)+12-(17*20)"
         );
     }
