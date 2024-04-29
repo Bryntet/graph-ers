@@ -12,17 +12,24 @@ pub enum ParseError {
     UnknownVariable(String),
     #[error("Unable to parse")]
     UnableToParse,
+    #[error("No function defined")]
+    NoFunctionDefined,
     #[error("Unable to find required argument: {0} in input")]
     UnableToFind(String),
     #[error("Token in invalid position")]
     InvalidTokenPosition,
+    #[error("Two decimal points used in the same number!")]
+    DoubleDecimal,
+    #[error("Unclosed parenthesis")]
+    UnclosedParenthesis
+    
 }
 #[derive(Debug, PartialEq)]
 pub struct Function {
     pub name: String,
     x_value: f64,
     internal_offset: f64,
-    test_ex: TokenQueue,
+    tokens: TokenQueue,
     variables: Vec<String>,
 }
 
@@ -42,7 +49,7 @@ impl TryFrom<&str> for Function {
 
 impl Function {
     pub fn y_pos(&self, variables: &HashMap<String, f64>) -> Result<f64, ParseError> {
-        self.test_ex.calculate(variables)
+        self.tokens.calculate(variables)
     }
 
     fn current_point(&self, variables: &HashMap<String, f64>) -> Result<[f64; 2], ParseError> {
@@ -58,10 +65,17 @@ impl Function {
     }
 
     fn parse(input: &str) -> Result<Self, ParseError> {
-        let function_match = Regex::new(r"(?P<FunctionName>\w+)\((?P<FunctionVariables>(?:[a-z]+,?)+)\)=(?P<Expression>[a-z01-9^*/()+-]+)").expect("Regex should compile");
+        let function_match = Regex::new(r"^(?<FunctionName>\w+)\((?<FunctionVariables>(?:[a-z]+,?)+)\)=(?<Expression>[a-z01-9^*/()+\-.]+)$").expect("Regex should compile");
+        let is_function_regex = Regex::new(r#"^[a-z]+\((?:\d+[a-z]*|\d*[a-z]+)+\)=(?:\(?(?:\d+[a-z]*|\d*[a-z]+)[+\-^/*)]?)+$"#).expect("Regex compiles");
         let captures = function_match
             .captures(input)
-            .ok_or(ParseError::UnableToParse)?;
+            .ok_or({ 
+                if !is_function_regex.is_match(input) {
+                    ParseError::NoFunctionDefined
+                } else {
+                    ParseError::UnableToParse
+                }
+            })?;
 
         let function_name = captures
             .name("FunctionName")
@@ -86,7 +100,7 @@ impl Function {
             name: function_name.to_string(),
             x_value: 0.0,
             internal_offset: 0.0,
-            test_ex,
+            tokens: test_ex,
             variables: function_variables,
         })
     }
@@ -101,6 +115,10 @@ impl Function {
             points.push(self.current_point(&self.generate_naive_map())?);
         }
         Ok(PlotPoints::from(points))
+    }
+    
+    pub fn internal_representation(&self) -> String {
+        format!("{}({})={}",self.name,self.variables.join(","),self.tokens.input_representation)
     }
 }
 

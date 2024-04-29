@@ -88,7 +88,7 @@ impl eframe::App for GraphErBrain {
                     let x = i as f64 * 0.01;
                     [x, x.sin()]
                 }).collect();*/
-                plot_ui.set_auto_bounds(Vec2b::new(false, false));
+                plot_ui.set_auto_bounds(Vec2b::new(false, true));
                 let test = plot_ui.plot_bounds().max();
                 let test1 = plot_ui.plot_bounds().min();
 
@@ -104,12 +104,15 @@ impl eframe::App for GraphErBrain {
                 self.zoom = Zoom::Same;
 
                 match Function::try_from(self.function_thing.trim().to_lowercase()) {
-                    Ok(mut func) => match func.plot_points(min_x + 0.001, max_x - 0.001) {
-                        Ok(points) => {
-                            plot_ui.line(Line::new(points).name(func.name));
-                            self.function_error = None;
+                    Ok(mut func) => {
+                        println!("{}",func.internal_representation());
+                        match func.plot_points(min_x + 0.001, max_x - 0.001) {
+                            Ok(points) => {
+                                plot_ui.line(Line::new(points).name(func.name));
+                                self.function_error = None;
+                            }
+                            Err(e) => self.function_error = Some(e.to_string())
                         }
-                        Err(e) => self.function_error = Some(e.to_string()),
                     },
                     Err(e) => self.function_error = Some(e.to_string()),
                 }

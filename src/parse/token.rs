@@ -132,7 +132,10 @@ impl Token {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TokenQueue(Vec<QueueItem>);
+pub struct TokenQueue{
+    queue_items: Vec<QueueItem>,
+    pub input_representation: String
+}
 
 #[derive(Debug, Clone, PartialEq)]
 enum QueueItem {
@@ -141,6 +144,8 @@ enum QueueItem {
     Token(Token),
     Queue(TokenQueue),
 }
+
+
 
 impl From<TokenQueue> for QueueItem {
     fn from(value: TokenQueue) -> Self {
@@ -162,40 +167,43 @@ impl From<Token> for QueueItem {
 
 impl TokenQueue {
     fn push(&mut self, item: QueueItem) {
-        self.0.push(item)
+        self.queue_items.push(item)
     }
 
     pub fn new(input: &str, variables: &[String]) -> Result<Self, ParseError> {
-        let mut s = Self(Vec::new());
-        let input = input.trim().replace(' ',"").to_lowercase();
-        
-        
-        let mut string_buff = String::new();
+        let input
+ = input.trim().replace(' ',"").to_lowercase();
         let input = Self::add_parenthesis(&input);
+        let mut s = Self{queue_items:Vec::new(),input_representation: input.clone()};
 
+        let mut string_buff = String::new();
+        
+        
         let mut chars = input.chars().peekable();
-        while let Some(c) = chars.next() {
+        while let Some(mut c) = chars.next() {
             if c == '(' {
                 let mut buffer = String::new();
-                let mut paren_count = 1;
-                // TODO: Add error handling for if no parentheses
-                for c in chars.by_ref() {
-                    buffer.push(c);
 
-                    if c == '(' {
-                        paren_count += 1;
-                    }
-                    if c == ')' {
-                        paren_count -= 1;
-                        if paren_count == 0 {
-                            break;
+                let mut paren_count = 0;
+                // TODO: Add error handling for if no parentheses
+                while buffer.chars().filter(|b_c|b_c==&'(').count()+1 > paren_count {
+                    if let Some(buff_char) = chars.next() {
+                        buffer.push(buff_char);
+                        if buff_char == ')' {
+                            paren_count += 1;
                         }
+                    } else {
+                        return Err(ParseError::UnclosedParenthesis);
                     }
+                    
                 }
                 buffer.pop();
                 s.push(Self::new(&buffer, variables)?.into());
+                if let Some(a) = chars.next() {
+                    c=a
+                }
             }
-            if let Some(number) = Self::get_next_number(&mut chars, &c) {
+            if let Some(number) = Self::get_next_number(&mut chars, c)? {
                 s.push(number.into())
             }
             if let Some(op) = Token::new(&c.to_string()) {
@@ -223,15 +231,26 @@ impl TokenQueue {
         Ok(s)
     }
     fn add_parenthesis(input: &str) -> String {
-        Self::add_parenthesis_multiplication(&dbg!(Self::add_parenthesis_exponent(input)))
+        Self::remove_parenthesis(&Self::add_most_basic_parenthesis(&Self::add_parenthesis_multiplication(&Self::add_parenthesis_exponent(input))))
     }
+
+    fn remove_parenthesis(input: &str) -> String {
+        let re = Regex::new(r#"\((\d+)\)"#).expect("Regex is valid");
+        re.replace_all(input, "$1").to_string()
+    }
+
+    /*fn add_hidden_multiplication(input: &str) -> String {
+        let re = Regex::new(r#"(\d)(\(|[a-z])"#).expect("Regex is valid");
+        let re2 = Regex::new(r#"([a-z])(\(|\d)"#).expect("Regex is valid");
+        re2.replace_all(&re.replace_all(input,"$1*$2"), "$1*$2").to_string()
+    }*/
 
     fn add_parenthesis_exponent(input: &str) -> String {
         if !input.contains(['+','-','*','/']) {
            input.to_string()
         } else {
-            let re = Regex::new(r#"(\d*[a-z]*\s*^\d*[a-z]*)"#).expect("Regex is valid");
-            re.replace_all(input,"($1)").to_string()
+            let re = Regex::new(r#"((?:(\d+)|([a-z]+))\^(\d*[a-z]*|\([^)]+\)))"#).expect("Regex is valid");
+            re.replace_all(input, "($3^($4))").to_string()
         }
     }
 
@@ -239,82 +258,115 @@ impl TokenQueue {
         if !input.contains(['+','-']) {
             input.to_string()
         } else {
-            let re = Regex::new(r#"(\d*[a-z]*\s*[*/]\d*[a-z]*)"#).unwrap();
+            let re = Regex::new(r#"((\(.+\)|\d*[a-z]*\s*)[*/](\(.+\)|\d*[a-z]*))"#).unwrap();
             re.replace_all(input, "($1)").to_string()
         }
     }
 
-    fn get_next_number(chars: &mut Peekable<Chars>, current_char: &char) -> Option<f64> {
+    fn add_most_basic_parenthesis(input: &str) -> String {
+        let re = Regex::new(r#"([-+])([^()+\-]+)"#).expect("Regex is valid");
+        re.replace_all(input, "$1($2)").to_string()
+    }
+
+    fn get_next_number(chars: &mut Peekable<Chars>, current_char: char) -> Result<Option<f64>,ParseError> {
         if current_char.is_ascii_digit() {
+            let mut has_gone_decimal = false;
             let mut num_buffer = String::from(current_char.to_owned());
             while chars
                 .peek()
-                .is_some_and(|c| c.is_ascii_digit() || c == &'.')
+                .is_some_and(|c|
+                    c.is_ascii_digit() || c == &'.'
+                )
             {
-                num_buffer.push(chars.next().unwrap())
+                let c = chars.next().expect("Already peeked forward");
+                if c == '.' {
+                    if has_gone_decimal {
+                        return Err(ParseError::DoubleDecimal);
+                    }
+                    has_gone_decimal = true;
+                }
+                dbg!(num_buffer.push(c))
             }
-            Some(num_buffer.parse().unwrap())
+            Ok(Some(num_buffer.parse().unwrap()))
         } else {
-            None
+            Ok(None)
         }
     }
-    pub fn calculate(&self, var_map: &HashMap<String, f64>) -> Result<f64, ParseError> {
-        let mut previous_num = 0.;
-        let mut list = self.0.iter().peekable();
+    fn get_var_value(var_name: &str, var_map: &HashMap<String,f64>) -> Result<f64,ParseError> {
+        var_map.get(var_name).copied().ok_or(ParseError::UnableToFind(format!("variable: \"{}\"",var_name)))
+    }
 
+    pub fn calculate(&self, var_map: &HashMap<String, f64>) -> Result<f64, ParseError> {
+        let previous_num: &mut Option<f64> = &mut None;
+        let mut list = self.queue_items.iter().peekable();
         while let Some(item) = list.next() {
             match item {
                 QueueItem::Variable(var_name) => {
-                    let var = var_map
-                        .get(var_name)
-                        .ok_or(ParseError::UnableToFind(format!(
-                            "variable \"{}\"",
-                            var_name
-                        )))?;
-                    if previous_num == 0. {
-                        previous_num = *var;
+                    let mut var = Self::get_var_value(var_name,var_map)?;
+                    while let Some(QueueItem::Variable(_)|QueueItem::Number(_)) = list.peek() {
+                        match list.next() {
+                            Some(QueueItem::Variable(var_name)) => var *= Self::get_var_value(var_name,var_map)?,
+                            Some(QueueItem::Number(num)) => var *= num,
+                            _ => unreachable!()
+                        }
+                    }
+                    if let Some(num) = previous_num {
+                        *num *= var;
                     } else {
-                        previous_num *= var
+                        *previous_num = Some(var)
                     }
                 }
-                QueueItem::Number(num) => previous_num = *num,
-                QueueItem::Token(token) => match list.next() {
-                    Some(item) => match item {
-                        QueueItem::Token(..) => {
-                            return Err(ParseError::InvalidTokenPosition);
-                        }
-                        QueueItem::Variable(var_name) => {
-                            previous_num = token
-                                .to_operation(
-                                    previous_num,
-                                    *var_map.get(var_name).ok_or(ParseError::UnableToFind(
-                                        format!("variable \"{}\"", var_name),
-                                    ))?,
-                                )
-                                .do_operation();
-                        }
-                        QueueItem::Number(num2) => {
-                            previous_num = token.to_operation(previous_num, *num2).do_operation();
-                        }
-                        QueueItem::Queue(inner_queue) => {
-                            previous_num = token
-                                .to_operation(previous_num, inner_queue.calculate(var_map)?)
-                                .do_operation()
-                        }
-                    },
-                    None => Err(ParseError::UnableToParse)?,
+                QueueItem::Number(num) => {
+                    if let Some(prev_num) = previous_num {
+                        *prev_num *= *num
+                    } else {
+                        *previous_num = Some(*num)
+                    }
                 },
-
-                QueueItem::Queue(q) => previous_num = q.calculate(var_map)?,
+                QueueItem::Token(token) => {
+                    match list.next() {
+                        Some(item) => match item {
+                            QueueItem::Token(..) => {
+                                return Err(ParseError::InvalidTokenPosition);
+                            }
+                            QueueItem::Variable(var_name) => {
+                                *previous_num = Some(token
+                                    .to_operation(
+                                        previous_num.ok_or(ParseError::InvalidTokenPosition)?,
+                                        *var_map.get(var_name).ok_or(ParseError::UnableToFind(
+                                            format!("variable \"{}\"", var_name),
+                                        ))?,
+                                    )
+                                    .do_operation());
+                            }
+                            QueueItem::Number(num2) => {
+                                *previous_num = Some(token.to_operation(previous_num.ok_or(ParseError::InvalidTokenPosition)?, *num2).do_operation());
+                            }
+                            QueueItem::Queue(inner_queue) => {
+                                *previous_num = Some(token
+                                    .to_operation(previous_num.ok_or(ParseError::InvalidTokenPosition)?, inner_queue.calculate(var_map)?)
+                                    .do_operation())
+                            }
+                        },
+                        None => return Err(ParseError::UnableToFind("next item".to_string())),
+                    }
+                }
+                QueueItem::Queue(q) => {
+                    if let Some(num) = previous_num {
+                        *num *= q.calculate(var_map)?
+                    } else {
+                        *previous_num  = Some(q.calculate(var_map)?)
+                    }
+                },
             }
         }
-        Ok(previous_num)
+        previous_num.ok_or(ParseError::UnableToParse)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::parse::TokenQueue;
+    use crate::parse::{Function, TokenQueue};
     use std::collections::HashMap;
 
     #[test]
@@ -333,5 +385,11 @@ mod test {
         let q = TokenQueue::new("t^2", &["t".to_string()]).unwrap();
         dbg!(&q);
         dbg!(q.calculate(&HashMap::from([("t".to_string(), 1.)])));
+    }
+
+    #[test]
+    fn test_things() {
+        let func = TokenQueue::new("(5t^3+5)", &["t".to_string()]).unwrap();
+        assert_eq!(func.calculate(&HashMap::<String,f64>::from([("t".to_string(),1.)])), Ok(10.));
     }
 }
