@@ -3,7 +3,6 @@ use itertools::Itertools;
 use log::warn;
 use prse::{try_parse, Parse};
 use regex::Regex;
-use std::ascii::Char;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::iter::Peekable;

@@ -3,12 +3,19 @@
 #![feature(let_chains)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
-mod app;
-mod helpers;
-mod parse;
+pub mod app;
+pub mod helpers;
+pub mod parse;
 
-use app::GraphErBrain;
+pub use app::GraphErBrain;
 
+
+#[cfg(not(target_arch = "wasm32"))]
 fn main() -> Result<(), eframe::Error> {
+    GraphErBrain::start()
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn main() {
     GraphErBrain::start()
 }

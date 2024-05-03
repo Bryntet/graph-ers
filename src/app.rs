@@ -6,6 +6,7 @@ use egui_autocomplete::AutoCompleteTextEdit;
 use egui_plot::{Legend, Line, Plot, PlotBounds, PlotPoint, PlotPoints, Points};
 use std::collections::{BTreeSet, HashMap};
 
+
 #[derive(Default)]
 pub struct GraphErBrain {
     input: AutoCompleteExample,
@@ -29,6 +30,7 @@ impl GraphErBrain {
             ..Default::default()
         }
     }
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn start() -> eframe::Result<()> {
         env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
@@ -42,6 +44,23 @@ impl GraphErBrain {
             options,
             Box::new(|_cc| Box::new(GraphErBrain::new())),
         )
+        
+    }
+    #[cfg(target_arch = "wasm32")]
+    pub fn start() {
+        eframe::WebLogger::init(log::LevelFilter::Debug).ok();
+        let web_options = eframe::WebOptions::default();
+        
+        wasm_bindgen_futures::spawn_local(async {
+            eframe::WebRunner::new()
+                .start(
+                    "the_canvas_id", // hardcode it
+                    web_options,
+                    Box::new(|_cc| Box::new(GraphErBrain::new())),
+                )
+                .await
+                .expect("failed to start eframe");
+        });
     }
 }
 
@@ -105,7 +124,7 @@ impl eframe::App for GraphErBrain {
 
                 match Function::try_from(self.function_thing.trim().to_lowercase()) {
                     Ok(mut func) => {
-                        println!("{}",func.internal_representation());
+                        //println!("{}",func.internal_representation());
                         match func.plot_points(min_x + 0.001, max_x - 0.001) {
                             Ok(points) => {
                                 plot_ui.line(Line::new(points).name(func.name));
