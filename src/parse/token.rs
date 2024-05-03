@@ -291,16 +291,16 @@ impl TokenQueue {
             Ok(None)
         }
     }
-    
+
     /// Gets the value of a variable from the variable map.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `var_name` - The name of the variable to get the value of.
     /// * `var_map` - A map of the function's variables to their values.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result<f64, ParseError>` - On success, the function returns `Ok(f64)`. On failure, it returns `Err(ParseError)`.
     fn get_var_value(var_name: &str, var_map: &HashMap<String, f64>) -> Result<f64, ParseError> {
         var_map
@@ -311,26 +311,26 @@ impl TokenQueue {
                 var_name
             )))
     }
-    
+
 
     /// Calculates the value of the function at the given x-value.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `var_map` - A map of the function's variables to their values.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result<f64, ParseError>` - On success, the function returns `Ok(f64)`. On failure, it returns `Err(ParseError)`.
     pub fn calculate(&self, var_map: &HashMap<String, f64>) -> Result<f64, ParseError> {
         let previous_num: &mut Option<f64> = &mut None;
-        
+
         // Make the list of items peekable so we can look ahead without taking ownership of the upcoming value.
         let mut list = self.queue_items.iter().peekable();
         while let Some(item) = list.next() {
             match item {
                 QueueItem::Variable(var_name) => {
-                    let mut var = Self::get_var_value(var_name, var_map)?; 
+                    let mut var = Self::get_var_value(var_name, var_map)?;
                     // Multiply the variable by any following variables or numbers.
                     while let Some(QueueItem::Variable(_) | QueueItem::Number(_)) = list.peek() {
                         match list.next() {
@@ -341,8 +341,8 @@ impl TokenQueue {
                             _ => unreachable!(),
                         }
                     }
-                    
-                    // If there is a previous number, multiply it by the current variable. 
+
+                    // If there is a previous number, multiply it by the current variable.
                     // Otherwise, set the previous number to the current variable.
                     if let Some(num) = previous_num {
                         *num *= var;

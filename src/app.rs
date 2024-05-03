@@ -7,9 +7,7 @@ use std::collections::{BTreeSet, HashMap};
 
 #[derive(Default)]
 pub struct GraphErBrain {
-    input: AutoCompleteExample,
     zoom: Zoom,
-    text_focused: bool,
     function_thing: Vec<FunctionInput>,
 }
 #[derive(Default)]
@@ -186,58 +184,3 @@ impl eframe::App for GraphErBrain {
         });
     }
 }
-
-struct AutoCompleteExample {
-    multi_input: String,
-    search_field: String,
-    max_suggestions: usize,
-    result: f64,
-    error: Option<String>,
-}
-
-impl Default for AutoCompleteExample {
-    fn default() -> Self {
-        Self {
-            multi_input: STARTER_LIST.to_string(),
-            search_field: "".to_string(),
-            max_suggestions: 10,
-            result: 0.,
-            error: None,
-        }
-    }
-}
-
-impl AutoCompleteExample {
-    fn update(&mut self, _ctx: &egui::Context, ui: &mut Ui, highlight_matches: bool) {
-        let inputs = self.multi_input.lines().collect::<BTreeSet<_>>();
-        self.search_field = self
-            .search_field
-            .chars()
-            .filter(|c| {
-                c.is_ascii_digit()
-                    || c.is_whitespace()
-                    || ['-', '+', '/', '*', '(', ')'].contains(c)
-            })
-            .collect();
-        ui.add(
-            AutoCompleteTextEdit::new(&mut self.search_field, inputs)
-                .max_suggestions(self.max_suggestions)
-                .highlight_matches(highlight_matches),
-        );
-        match crate::parse::TokenQueue::new(&self.search_field, &[]) {
-            Ok(operation_queue) => {
-                if let Ok(result) = operation_queue.calculate(&HashMap::<String, f64>::new()) {
-                    self.result = result;
-                    self.error = None;
-                }
-            }
-            Err(e) => self.error = Some(e.to_string()),
-        }
-        ui.separator();
-        // Display the result next to the input field
-        ui.label(format!("Result: {}", self.result));
-    }
-}
-
-const STARTER_LIST: &str = r#"test
-"#;
