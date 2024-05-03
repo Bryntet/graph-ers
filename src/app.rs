@@ -57,7 +57,9 @@ impl GraphErBrain {
         env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
         let options = eframe::NativeOptions {
-            viewport: egui::ViewportBuilder::default().with_inner_size([1280., 720.]),
+            viewport: egui::ViewportBuilder::default()
+                .with_inner_size([1280., 720.])
+                .with_title("Graph-ers - The oxidized geogebra replacement"),
             default_theme: Theme::Dark,
             ..Default::default()
         };
