@@ -6,7 +6,6 @@ use egui_autocomplete::AutoCompleteTextEdit;
 use egui_plot::{Legend, Line, Plot, PlotBounds, PlotPoint, PlotPoints, Points};
 use std::collections::{BTreeSet, HashMap};
 
-
 #[derive(Default)]
 pub struct GraphErBrain {
     input: AutoCompleteExample,
@@ -44,13 +43,12 @@ impl GraphErBrain {
             options,
             Box::new(|_cc| Box::new(GraphErBrain::new())),
         )
-        
     }
     #[cfg(target_arch = "wasm32")]
     pub fn start() {
         eframe::WebLogger::init(log::LevelFilter::Debug).ok();
         let web_options = eframe::WebOptions::default();
-        
+
         wasm_bindgen_futures::spawn_local(async {
             eframe::WebRunner::new()
                 .start(
@@ -130,9 +128,9 @@ impl eframe::App for GraphErBrain {
                                 plot_ui.line(Line::new(points).name(func.name));
                                 self.function_error = None;
                             }
-                            Err(e) => self.function_error = Some(e.to_string())
+                            Err(e) => self.function_error = Some(e.to_string()),
                         }
-                    },
+                    }
                     Err(e) => self.function_error = Some(e.to_string()),
                 }
             });

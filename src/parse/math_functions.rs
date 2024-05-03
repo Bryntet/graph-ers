@@ -21,8 +21,7 @@ pub enum ParseError {
     #[error("Two decimal points used in the same number!")]
     DoubleDecimal,
     #[error("Unclosed parenthesis")]
-    UnclosedParenthesis
-    
+    UnclosedParenthesis,
 }
 #[derive(Debug, PartialEq)]
 pub struct Function {
@@ -66,16 +65,17 @@ impl Function {
 
     fn parse(input: &str) -> Result<Self, ParseError> {
         let function_match = Regex::new(r"^(?<FunctionName>\w+)\((?<FunctionVariables>(?:[a-z]+,?)+)\)=(?<Expression>[a-z01-9^*/()+\-.]+)$").expect("Regex should compile");
-        let is_function_regex = Regex::new(r#"^[a-z]+\((?:\d+[a-z]*|\d*[a-z]+)+\)=(?:\(?(?:\d+[a-z]*|\d*[a-z]+)[+\-^/*)]?)+$"#).expect("Regex compiles");
-        let captures = function_match
-            .captures(input)
-            .ok_or({ 
-                if !is_function_regex.is_match(input) {
-                    ParseError::NoFunctionDefined
-                } else {
-                    ParseError::UnableToParse
-                }
-            })?;
+        let is_function_regex = Regex::new(
+            r#"^[a-z]+\((?:\d+[a-z]*|\d*[a-z]+)+\)=(?:\(?(?:\d+[a-z]*|\d*[a-z]+)[+\-^/*)]?)+$"#,
+        )
+        .expect("Regex compiles");
+        let captures = function_match.captures(input).ok_or({
+            if !is_function_regex.is_match(input) {
+                ParseError::NoFunctionDefined
+            } else {
+                ParseError::UnableToParse
+            }
+        })?;
 
         let function_name = captures
             .name("FunctionName")
@@ -116,9 +116,14 @@ impl Function {
         }
         Ok(PlotPoints::from(points))
     }
-    
+
     pub fn internal_representation(&self) -> String {
-        format!("{}({})={}",self.name,self.variables.join(","),self.tokens.input_representation)
+        format!(
+            "{}({})={}",
+            self.name,
+            self.variables.join(","),
+            self.tokens.input_representation
+        )
     }
 }
 
