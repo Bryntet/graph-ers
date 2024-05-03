@@ -1,5 +1,4 @@
 use crate::parse::math_functions::ParseError;
-use itertools::Itertools;
 use prse::{try_parse, Parse};
 use regex::Regex;
 use std::collections::HashMap;

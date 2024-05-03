@@ -1,9 +1,7 @@
 use crate::parse::{Function, ParseError};
 use eframe::{egui, Theme};
-use eframe::egui::{Color32, IconData, Key, RichText, Separator, Ui, Vec2, Vec2b};
-use egui_autocomplete::AutoCompleteTextEdit;
+use eframe::egui::{Color32, Key, RichText, Vec2, Vec2b};
 use egui_plot::{Legend, Line, Plot, PlotPoint, PlotPoints};
-use std::collections::{BTreeSet, HashMap};
 
 #[derive(Default)]
 pub struct GraphErBrain {
