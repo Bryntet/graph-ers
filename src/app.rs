@@ -26,11 +26,19 @@ impl FunctionInput {
     }
 
     fn err(&self) -> Option<String> {
-        // Check on points instead of function to catch any additional errors that may occur during later parsing.
-        match self.points(0.,1.) {
+        // Check on calculations instead of function to catch any additional errors that may occur during later parsing.
+        match self.func() {
             Err(e) => Some(e.to_string()),
-            Ok(_) => None
+            Ok(f) => {
+                if let Err(e) = f.y_pos(&f.generate_naive_map()) {
+                    Some(e.to_string())
+                } else {
+                    None
+                }
+            
+            }
         }
+        
     }
 
     fn name(&self) -> Result<String, ParseError> {
@@ -62,7 +70,7 @@ impl GraphErBrain {
                 .with_title("Graph-ers - The oxidized geogebra replacement")
                 .with_icon(eframe::icon_data::from_png_bytes(include_bytes!("../icon.png")).expect("Is valid png.")),
             default_theme: Theme::Dark,
-            
+
             ..Default::default()
         };
 
