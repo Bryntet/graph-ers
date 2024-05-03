@@ -1,5 +1,5 @@
 use crate::parse::{Function, ParseError};
-use eframe::egui;
+use eframe::{egui, Theme};
 use eframe::egui::{Color32, Key, RichText, Ui, Vec2, Vec2b};
 use egui_autocomplete::AutoCompleteTextEdit;
 use egui_plot::{Legend, Line, Plot, PlotPoint, PlotPoints};
@@ -58,6 +58,7 @@ impl GraphErBrain {
 
         let options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default().with_inner_size([1280., 720.]),
+            default_theme: Theme::Dark,
             ..Default::default()
         };
 
