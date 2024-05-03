@@ -284,7 +284,7 @@ impl TokenQueue {
                     }
                     has_gone_decimal = true;
                 }
-                dbg!(num_buffer.push(c))
+                num_buffer.push(c)
             }
             Ok(Some(num_buffer.parse().unwrap()))
         } else {
