@@ -175,7 +175,7 @@ impl eframe::App for GraphErBrain {
 
                 for func in &mut self.function_thing {
                     // Ignore errors since that's handled elsewhere
-                    if let Ok(points) = func.points(minimum_bound[0] + 0.001, maximum_bound[1] - 0.001) {
+                    if let Ok(points) = func.points(minimum_bound[0], maximum_bound[1]) {
                         plot_ui.line(Line::new(points).name(func.name().expect("Func already valid since points was ok")));
                     }
                 }
