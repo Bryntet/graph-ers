@@ -239,9 +239,9 @@ impl TokenQueue {
         if !input.contains(['+', '-', '*', '/']) {
             input.to_string()
         } else {
-            let re = Regex::new(r#"((?:(\d+)|([a-z]+))\^(\d*[a-z]*|\([^)]+\)))"#)
+            let re = Regex::new(r#"(?:(\d+)|([a-z]+))\^(\d*[a-z]*\d*|\([^)]+\))"#)
                 .expect("Regex is valid");
-            re.replace_all(input, "($3^($4))").to_string()
+            re.replace_all(input, "($2^($3))").to_string()
         }
     }
 
