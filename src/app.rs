@@ -1,6 +1,6 @@
 use crate::parse::{Function, ParseError};
 use eframe::{egui, Theme};
-use eframe::egui::{Color32, Key, RichText, Vec2, Vec2b};
+use eframe::egui::{Color32, Key, RichText, Vec2, Vec2b, WindowLevel};
 use egui_plot::{Legend, Line, Plot, PlotPoint, PlotPoints};
 
 #[derive(Default)]
@@ -64,7 +64,7 @@ impl GraphErBrain {
             viewport: egui::ViewportBuilder::default()
                 .with_inner_size([1280., 720.])
                 .with_title("Graph-ers - The oxidized geogebra replacement")
-                .with_icon(eframe::icon_data::from_png_bytes(include_bytes!("../icon.png")).expect("Is valid png.")).with_transparent(true),
+                .with_icon(eframe::icon_data::from_png_bytes(include_bytes!("../icon.png")).expect("Is valid png.")),
             default_theme: Theme::Dark,
             ..Default::default()
         };
