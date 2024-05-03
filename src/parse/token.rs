@@ -235,12 +235,6 @@ impl TokenQueue {
         re.replace_all(input, "$1").to_string()
     }
 
-    /*fn add_hidden_multiplication(input: &str) -> String {
-        let re = Regex::new(r#"(\d)(\(|[a-z])"#).expect("Regex is valid");
-        let re2 = Regex::new(r#"([a-z])(\(|\d)"#).expect("Regex is valid");
-        re2.replace_all(&re.replace_all(input,"$1*$2"), "$1*$2").to_string()
-    }*/
-
     fn add_parenthesis_exponent(input: &str) -> String {
         if !input.contains(['+', '-', '*', '/']) {
             input.to_string()
