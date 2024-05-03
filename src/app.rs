@@ -1,8 +1,8 @@
-use crate::parse::Function;
+use crate::parse::{Function, ParseError};
 use eframe::egui;
 use eframe::egui::{Color32, Key, RichText, Ui, Vec2, Vec2b};
 use egui_autocomplete::AutoCompleteTextEdit;
-use egui_plot::{Legend, Line, Plot, PlotPoint};
+use egui_plot::{Legend, Line, Plot, PlotPoint, PlotPoints};
 use std::collections::{BTreeSet, HashMap};
 
 #[derive(Default)]
@@ -10,10 +10,34 @@ pub struct GraphErBrain {
     input: AutoCompleteExample,
     zoom: Zoom,
     text_focused: bool,
-    function_thing: String,
-    function_error: Option<String>,
+    function_thing: Vec<FunctionInput>,
 }
+#[derive(Default)]
+struct FunctionInput(String);
 
+
+impl FunctionInput {
+    fn func(&self) -> Result<Function, ParseError> {
+        Function::try_from(self.0.clone())
+    }
+    
+    fn points(&self, minimum_x:f64,maximum_x:f64) -> Result<PlotPoints, ParseError> {
+        self.func()?.plot_points(minimum_x,maximum_x)
+    }
+    
+    fn err(&self) -> Option<String> {
+        // Check on points instead of function to catch any additional errors that may occur during later parsing.
+        match self.points(0.,1.) {
+            Err(e) => Some(e.to_string()),
+            Ok(_) => None
+        }
+    }
+    
+    fn name(&self) -> Result<String, ParseError> {
+        Ok(self.func()?.name)
+    }
+    
+}
 #[derive(Default)]
 enum Zoom {
     Increase,
@@ -43,6 +67,8 @@ impl GraphErBrain {
             Box::new(|_cc| Box::new(GraphErBrain::new())),
         )
     }
+    
+    // Optional branch that gets followed if built for wasm target
     #[cfg(target_arch = "wasm32")]
     pub fn start() {
         eframe::WebLogger::init(log::LevelFilter::Debug).ok();
@@ -63,10 +89,11 @@ impl GraphErBrain {
 
 impl eframe::App for GraphErBrain {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Persistence for the plot 
         let mut plot_rect = None;
 
         let mut space_to_the_left_of_graph = 0.;
-
+        
         egui::SidePanel::left("math_input").show(ctx, |ui| {
             ui.label("Enter your text:");
             space_to_the_left_of_graph = ui.available_width();
@@ -74,19 +101,21 @@ impl eframe::App for GraphErBrain {
                 ui.available_size(),
                 egui::Layout::top_down(egui::Align::Max),
                 |ui| {
-                    self.input.update(ctx, ui, true);
-                    ui.text_edit_singleline(&mut self.function_thing);
-                    if let Some(error) = &self.function_error {
-                        ui.label(RichText::new(error).color(Color32::RED));
+                    for func_input in &mut self.function_thing {
+                        ui.text_edit_singleline(&mut func_input.0);
+                        if let Some(error) = &func_input.err() {
+                            ui.label(RichText::new(error).color(Color32::RED));
+                        }
                     }
+                    
                 },
             );
         });
+        
         let latest_pointer_x_pos = ctx.pointer_latest_pos().unwrap_or_default().x;
-
         let is_right_of_math_input = space_to_the_left_of_graph < latest_pointer_x_pos;
         egui::CentralPanel::default().show(ctx, |ui| {
-            let my_plot = Plot::new("Grafen!").legend(Legend::default());
+            let my_plot = Plot::new("Main graph area").legend(Legend::default());
 
             let inner = my_plot.show(ui, |plot_ui| {
                 if is_right_of_math_input {
@@ -98,12 +127,11 @@ impl eframe::App for GraphErBrain {
                         }
                     })
                 }
-                let min_x = plot_ui.plot_bounds().min()[0];
-                let max_x = plot_ui.plot_bounds().max()[0];
-                /*let sin: PlotPoints = (0..1000).map(|i| {
-                    let x = i as f64 * 0.01;
-                    [x, x.sin()]
-                }).collect();*/
+                
+                
+                let minimum_x_bound = plot_ui.plot_bounds().min()[0];
+                let maximum_x_bound = plot_ui.plot_bounds().max()[0];
+                
                 plot_ui.set_auto_bounds(Vec2b::new(false, true));
                 let test = plot_ui.plot_bounds().max();
                 let test1 = plot_ui.plot_bounds().min();
@@ -113,25 +141,26 @@ impl eframe::App for GraphErBrain {
                     Zoom::Decrease => Vec2::new(0.5, 0.5),
                     Zoom::Same => Vec2::new(1., 1.),
                 };
+                
                 plot_ui.zoom_bounds(
                     zoom_factor,
                     PlotPoint::new((test1[0] + test[0]) / 2., (test1[1] + test[1]) / 2.),
                 );
                 self.zoom = Zoom::Same;
 
-                match Function::try_from(self.function_thing.trim().to_lowercase()) {
-                    Ok(mut func) => {
-                        //println!("{}",func.internal_representation());
-                        match func.plot_points(min_x + 0.001, max_x - 0.001) {
-                            Ok(points) => {
-                                plot_ui.line(Line::new(points).name(func.name));
-                                self.function_error = None;
-                            }
-                            Err(e) => self.function_error = Some(e.to_string()),
-                        }
+                for func in &mut self.function_thing {
+                    if let Ok(points) = func.points(minimum_x_bound + 0.001, maximum_x_bound - 0.001) {
+                        plot_ui.line(Line::new(points).name(func.name().expect("Func already valid since points was ok")));
                     }
-                    Err(e) => self.function_error = Some(e.to_string()),
+                    // Ignore errors since that's handled elsewhere
                 }
+                // All have text and none have errors (because it indicates usage), so add an empty text box
+                if self.function_thing.iter().all(|f|!f.0.is_empty() && f.err().is_none()) {
+                    self.function_thing.push(FunctionInput::default());
+                }
+                
+                
+                
             });
 
             // Remember the position of the plot
@@ -186,7 +215,6 @@ impl AutoCompleteExample {
             }
             Err(e) => self.error = Some(e.to_string()),
         }
-
         ui.separator();
         // Display the result next to the input field
         ui.label(format!("Result: {}", self.result));
