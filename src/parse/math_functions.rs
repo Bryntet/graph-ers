@@ -47,15 +47,14 @@ impl TryFrom<&str> for Function {
 }
 
 impl Function {
-    
     /// Calculates the y-value of the function at the current x-value.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `variables` - A map of the function's variables to their values.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// * `Result<f64, ParseError>` - On success, the function returns `Ok(f64)`. On failure, it returns `Err(ParseError)`.
     pub fn y_pos(&self, variables: &HashMap<String, f64>) -> Result<f64, ParseError> {
         self.tokens.calculate(variables)
@@ -65,7 +64,6 @@ impl Function {
         Ok([self.x_value, self.y_pos(variables)?])
     }
 
-    
     /// Generates a naive map of the function's variables to the x-value.
     pub fn generate_naive_map(&self) -> HashMap<String, f64> {
         let mut map = HashMap::new();
@@ -74,7 +72,7 @@ impl Function {
         }
         map
     }
-    
+
     fn parse(input: &str) -> Result<Self, ParseError> {
         let function_match = Regex::new(r"^(?<FunctionName>\w+)\((?<FunctionVariables>(?:[a-z]+,?)+)\)=(?<Expression>[a-z01-9^*/()+\-.]+)$").expect("Regex should compile");
         let is_function_regex = Regex::new(
@@ -117,7 +115,6 @@ impl Function {
         })
     }
 
-
     /// Generates the points to be plotted for the mathematical function.
     ///
     /// # Arguments
@@ -131,7 +128,7 @@ impl Function {
     pub fn plot_points(&mut self, min_x: f64, max_x: f64) -> Result<PlotPoints, ParseError> {
         let mut points = Vec::new();
 
-        self.internal_offset = ((max_x+(max_x/100.)) - (min_x-(min_x/100.))) / 2000.;
+        self.internal_offset = ((max_x + (max_x / 100.)) - (min_x - (min_x / 100.))) / 2000.;
         self.x_value = min_x;
         while self.x_value < max_x {
             points.push(self.current_point(&self.generate_naive_map())?);
@@ -167,7 +164,6 @@ impl Iterator for Function {
 mod test {
     use crate::parse::math_functions::ParseError;
     use crate::parse::Function;
-    
 
     #[test]
     fn parse_function() {

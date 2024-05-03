@@ -305,7 +305,6 @@ impl TokenQueue {
             )))
     }
 
-
     /// Calculates the value of the function at the given x-value.
     ///
     /// # Arguments
@@ -407,19 +406,13 @@ impl TokenQueue {
 
 #[cfg(test)]
 mod test {
-    use crate::parse::{TokenQueue};
+    use crate::parse::TokenQueue;
     use std::collections::HashMap;
 
     #[test]
     fn test_add_parenthesis() {
-        assert_eq!(
-            TokenQueue::add_parenthesis_multiplication("1*1"),
-            "(1*1)"
-        );
-        assert_eq!(
-            TokenQueue::add_parenthesis_multiplication("1/1"),
-            "(1/1)"
-        );
+        assert_eq!(TokenQueue::add_parenthesis_multiplication("1*1"), "(1*1)");
+        assert_eq!(TokenQueue::add_parenthesis_multiplication("1/1"), "(1/1)");
         assert_eq!(
             TokenQueue::add_parenthesis_multiplication("1*1*1"),
             "(1*1*1)"

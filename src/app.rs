@@ -1,6 +1,6 @@
 use crate::parse::{Function, ParseError};
-use eframe::{egui, Theme};
 use eframe::egui::{Color32, Key, RichText, Vec2, Vec2b};
+use eframe::{egui, Theme};
 use egui_plot::{Legend, Line, Plot, PlotPoint, PlotPoints};
 
 #[derive(Default)]
@@ -11,14 +11,13 @@ pub struct GraphErBrain {
 #[derive(Default)]
 struct FunctionInput(String);
 
-
 impl FunctionInput {
     fn func(&self) -> Result<Function, ParseError> {
         Function::try_from(self.0.clone())
     }
 
-    fn points(&self, minimum_x:f64,maximum_x:f64) -> Result<PlotPoints, ParseError> {
-        self.func()?.plot_points(minimum_x,maximum_x)
+    fn points(&self, minimum_x: f64, maximum_x: f64) -> Result<PlotPoints, ParseError> {
+        self.func()?.plot_points(minimum_x, maximum_x)
     }
 
     fn err(&self) -> Option<ParseError> {
@@ -31,16 +30,13 @@ impl FunctionInput {
                 } else {
                     None
                 }
-
             }
         }
-
     }
 
     fn name(&self) -> Result<String, ParseError> {
         Ok(self.func()?.name)
     }
-
 }
 #[derive(Default)]
 enum Zoom {
@@ -48,7 +44,7 @@ enum Zoom {
     Decrease,
     Same,
     #[default]
-    InitialState
+    InitialState,
 }
 
 impl GraphErBrain {
@@ -65,7 +61,10 @@ impl GraphErBrain {
             viewport: egui::ViewportBuilder::default()
                 .with_inner_size([1280., 720.])
                 .with_title("Graph-ers - The oxidized geogebra replacement")
-                .with_icon(eframe::icon_data::from_png_bytes(include_bytes!("../icon.png")).expect("Is valid png.")),
+                .with_icon(
+                    eframe::icon_data::from_png_bytes(include_bytes!("../icon.png"))
+                        .expect("Is valid png."),
+                ),
             default_theme: Theme::Dark,
             ..Default::default()
         };
@@ -102,11 +101,10 @@ impl eframe::App for GraphErBrain {
         let mut plot_rect = None;
 
         let mut space_to_the_left_of_graph = 0.;
-        
-        
+
         egui::SidePanel::left("math_input").show(ctx, |ui| {
             ctx.set_zoom_factor(1.3);
-            
+
             ui.label("Enter your text:");
             space_to_the_left_of_graph = ui.available_width();
             ui.allocate_ui_with_layout(
@@ -128,11 +126,9 @@ impl eframe::App for GraphErBrain {
                             }
                         }
                     }
-
                 },
             );
         });
-
 
         let latest_pointer_x_pos = ctx.pointer_latest_pos().unwrap_or_default().x;
         let is_right_of_math_input = space_to_the_left_of_graph < latest_pointer_x_pos;
@@ -169,17 +165,27 @@ impl eframe::App for GraphErBrain {
 
                 plot_ui.zoom_bounds(
                     zoom_factor,
-                    PlotPoint::new((minimum_bound[0] + maximum_bound[0]) / 2., (minimum_bound[1] + maximum_bound[1]) / 2.),
+                    PlotPoint::new(
+                        (minimum_bound[0] + maximum_bound[0]) / 2.,
+                        (minimum_bound[1] + maximum_bound[1]) / 2.,
+                    ),
                 );
                 self.zoom = Zoom::Same;
 
                 for func in &mut self.function_thing {
                     // Ignore errors since that's handled elsewhere
                     if let Ok(points) = func.points(minimum_bound[0], maximum_bound[1]) {
-                        plot_ui.line(Line::new(points).name(func.name().expect("Func already valid since points was ok")));
+                        plot_ui
+                            .line(Line::new(points).name(
+                                func.name().expect("Func already valid since points was ok"),
+                            ));
                     }
                 }
-                if self.function_thing.iter().all(|f|!f.0.is_empty() && f.err().is_none()) {
+                if self
+                    .function_thing
+                    .iter()
+                    .all(|f| !f.0.is_empty() && f.err().is_none())
+                {
                     // All have text and none have errors (because it indicates usage),
                     // so add an empty text box
                     self.function_thing.push(FunctionInput::default());
