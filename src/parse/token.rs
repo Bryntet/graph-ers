@@ -1,10 +1,8 @@
 use crate::parse::math_functions::ParseError;
 use itertools::Itertools;
-use log::warn;
 use prse::{try_parse, Parse};
 use regex::Regex;
 use std::collections::HashMap;
-use std::collections::VecDeque;
 use std::iter::Peekable;
 use std::str::Chars;
 
@@ -387,7 +385,7 @@ impl TokenQueue {
 
 #[cfg(test)]
 mod test {
-    use crate::parse::{Function, TokenQueue};
+    use crate::parse::{TokenQueue};
     use std::collections::HashMap;
 
     #[test]

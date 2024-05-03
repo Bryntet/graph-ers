@@ -1,9 +1,8 @@
-use crate::helpers::random_data;
 use crate::parse::Function;
 use eframe::egui;
-use eframe::egui::{Color32, Key, RichText, Ui, Vec2, Vec2b, WidgetText};
+use eframe::egui::{Color32, Key, RichText, Ui, Vec2, Vec2b};
 use egui_autocomplete::AutoCompleteTextEdit;
-use egui_plot::{Legend, Line, Plot, PlotBounds, PlotPoint, PlotPoints, Points};
+use egui_plot::{Legend, Line, Plot, PlotPoint};
 use std::collections::{BTreeSet, HashMap};
 
 #[derive(Default)]
@@ -178,7 +177,7 @@ impl AutoCompleteExample {
                 .max_suggestions(self.max_suggestions)
                 .highlight_matches(highlight_matches),
         );
-        match crate::parse::TokenQueue::new(&self.search_field, &vec![]) {
+        match crate::parse::TokenQueue::new(&self.search_field, &[]) {
             Ok(operation_queue) => {
                 if let Ok(result) = operation_queue.calculate(&HashMap::<String, f64>::new()) {
                     self.result = result;

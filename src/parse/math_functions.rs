@@ -143,7 +143,7 @@ impl Iterator for Function {
 mod test {
     use crate::parse::math_functions::ParseError;
     use crate::parse::Function;
-    use std::collections::HashMap;
+    
 
     #[test]
     fn parse_function() {
