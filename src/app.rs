@@ -1,6 +1,6 @@
 use crate::parse::{Function, ParseError};
 use eframe::{egui, Theme};
-use eframe::egui::{Color32, Key, RichText, Vec2, Vec2b, WindowLevel};
+use eframe::egui::{Color32, Key, RichText, Vec2, Vec2b};
 use egui_plot::{Legend, Line, Plot, PlotPoint, PlotPoints};
 
 #[derive(Default)]
