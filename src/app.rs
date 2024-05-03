@@ -21,20 +21,20 @@ impl FunctionInput {
         self.func()?.plot_points(minimum_x,maximum_x)
     }
 
-    fn err(&self) -> Option<String> {
+    fn err(&self) -> Option<ParseError> {
         // Check on calculations instead of function to catch any additional errors that may occur during later parsing.
         match self.func() {
-            Err(e) => Some(e.to_string()),
+            Err(e) => Some(e),
             Ok(f) => {
                 if let Err(e) = f.y_pos(&f.generate_naive_map()) {
-                    Some(e.to_string())
+                    Some(e)
                 } else {
                     None
                 }
-            
+
             }
         }
-        
+
     }
 
     fn name(&self) -> Result<String, ParseError> {
@@ -64,9 +64,8 @@ impl GraphErBrain {
             viewport: egui::ViewportBuilder::default()
                 .with_inner_size([1280., 720.])
                 .with_title("Graph-ers - The oxidized geogebra replacement")
-                .with_icon(eframe::icon_data::from_png_bytes(include_bytes!("../icon.png")).expect("Is valid png.")),
+                .with_icon(eframe::icon_data::from_png_bytes(include_bytes!("../icon.png")).expect("Is valid png.")).with_transparent(true),
             default_theme: Theme::Dark,
-
             ..Default::default()
         };
 
@@ -102,8 +101,11 @@ impl eframe::App for GraphErBrain {
         let mut plot_rect = None;
 
         let mut space_to_the_left_of_graph = 0.;
-
+        
+        
         egui::SidePanel::left("math_input").show(ctx, |ui| {
+            ctx.set_zoom_factor(1.3);
+            
             ui.label("Enter your text:");
             space_to_the_left_of_graph = ui.available_width();
             ui.allocate_ui_with_layout(
@@ -117,7 +119,12 @@ impl eframe::App for GraphErBrain {
                         }
                         ui.text_edit_singleline(&mut func_input.0);
                         if let Some(error) = &func_input.err() {
-                            ui.label(RichText::new(error).color(Color32::RED));
+                            match error {
+                                ParseError::NoFunctionDefined => (),
+                                _ => {
+                                    ui.label(RichText::new(error.to_string()).color(Color32::RED));
+                                }
+                            }
                         }
                     }
 
