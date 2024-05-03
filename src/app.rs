@@ -1,6 +1,6 @@
 use crate::parse::{Function, ParseError};
 use eframe::{egui, Theme};
-use eframe::egui::{Color32, Key, RichText, Ui, Vec2, Vec2b};
+use eframe::egui::{Color32, Key, RichText, Separator, Ui, Vec2, Vec2b};
 use egui_autocomplete::AutoCompleteTextEdit;
 use egui_plot::{Legend, Line, Plot, PlotPoint, PlotPoints};
 use std::collections::{BTreeSet, HashMap};
@@ -20,11 +20,11 @@ impl FunctionInput {
     fn func(&self) -> Result<Function, ParseError> {
         Function::try_from(self.0.clone())
     }
-    
+
     fn points(&self, minimum_x:f64,maximum_x:f64) -> Result<PlotPoints, ParseError> {
         self.func()?.plot_points(minimum_x,maximum_x)
     }
-    
+
     fn err(&self) -> Option<String> {
         // Check on points instead of function to catch any additional errors that may occur during later parsing.
         match self.points(0.,1.) {
@@ -32,11 +32,11 @@ impl FunctionInput {
             Ok(_) => None
         }
     }
-    
+
     fn name(&self) -> Result<String, ParseError> {
         Ok(self.func()?.name)
     }
-    
+
 }
 #[derive(Default)]
 enum Zoom {
@@ -68,7 +68,7 @@ impl GraphErBrain {
             Box::new(|_cc| Box::new(GraphErBrain::new())),
         )
     }
-    
+
     // Optional branch that gets followed if built for wasm target
     #[cfg(target_arch = "wasm32")]
     pub fn start() {
@@ -90,11 +90,11 @@ impl GraphErBrain {
 
 impl eframe::App for GraphErBrain {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Persistence for the plot 
+        // Persistence for the plot
         let mut plot_rect = None;
 
         let mut space_to_the_left_of_graph = 0.;
-        
+
         egui::SidePanel::left("math_input").show(ctx, |ui| {
             ui.label("Enter your text:");
             space_to_the_left_of_graph = ui.available_width();
@@ -102,23 +102,30 @@ impl eframe::App for GraphErBrain {
                 ui.available_size(),
                 egui::Layout::top_down(egui::Align::Max),
                 |ui| {
-                    for func_input in &mut self.function_thing {
+                    for (i, func_input) in self.function_thing.iter_mut().enumerate() {
+                        // If not first iteration, add separator above current.
+                        if i != 0 {
+                            ui.separator();
+                        }
                         ui.text_edit_singleline(&mut func_input.0);
                         if let Some(error) = &func_input.err() {
                             ui.label(RichText::new(error).color(Color32::RED));
                         }
                     }
-                    
+
                 },
             );
         });
-        
+
+
         let latest_pointer_x_pos = ctx.pointer_latest_pos().unwrap_or_default().x;
         let is_right_of_math_input = space_to_the_left_of_graph < latest_pointer_x_pos;
+
         egui::CentralPanel::default().show(ctx, |ui| {
             let my_plot = Plot::new("Main graph area").legend(Legend::default());
 
-            let inner = my_plot.show(ui, |plot_ui| {
+            let plot_response = my_plot.show(ui, |plot_ui| {
+                // Logic for if zoom keys should zoom the graph
                 if is_right_of_math_input {
                     ctx.input(|input| {
                         if input.key_pressed(Key::Plus) {
@@ -128,44 +135,42 @@ impl eframe::App for GraphErBrain {
                         }
                     })
                 }
-                
-                
-                let minimum_x_bound = plot_ui.plot_bounds().min()[0];
-                let maximum_x_bound = plot_ui.plot_bounds().max()[0];
-                
+
+                // Don't automatically zoom based on the graphs because
+                // otherwise it will go crazy because of the bounds
                 plot_ui.set_auto_bounds(Vec2b::new(false, true));
-                let test = plot_ui.plot_bounds().max();
-                let test1 = plot_ui.plot_bounds().min();
+
+                // Minimum and maximum bounds used for knowing which range is actually needed to calculate
+                let minimum_bound = plot_ui.plot_bounds().min();
+                let maximum_bound = plot_ui.plot_bounds().max();
 
                 let zoom_factor = match self.zoom {
                     Zoom::Increase => Vec2::new(2., 2.),
                     Zoom::Decrease => Vec2::new(0.5, 0.5),
                     Zoom::Same => Vec2::new(1., 1.),
                 };
-                
+
                 plot_ui.zoom_bounds(
                     zoom_factor,
-                    PlotPoint::new((test1[0] + test[0]) / 2., (test1[1] + test[1]) / 2.),
+                    PlotPoint::new((minimum_bound[0] + maximum_bound[0]) / 2., (minimum_bound[1] + maximum_bound[1]) / 2.),
                 );
                 self.zoom = Zoom::Same;
 
                 for func in &mut self.function_thing {
-                    if let Ok(points) = func.points(minimum_x_bound + 0.001, maximum_x_bound - 0.001) {
+                    // Ignore errors since that's handled elsewhere
+                    if let Ok(points) = func.points(minimum_bound[0] + 0.001, maximum_bound[1] - 0.001) {
                         plot_ui.line(Line::new(points).name(func.name().expect("Func already valid since points was ok")));
                     }
-                    // Ignore errors since that's handled elsewhere
                 }
-                // All have text and none have errors (because it indicates usage), so add an empty text box
                 if self.function_thing.iter().all(|f|!f.0.is_empty() && f.err().is_none()) {
+                    // All have text and none have errors (because it indicates usage),
+                    // so add an empty text box
                     self.function_thing.push(FunctionInput::default());
                 }
-                
-                
-                
             });
 
             // Remember the position of the plot
-            plot_rect = Some(inner.response.rect);
+            plot_rect = Some(plot_response.response.rect);
         });
     }
 }
