@@ -46,8 +46,9 @@ impl FunctionInput {
 enum Zoom {
     Increase,
     Decrease,
-    #[default]
     Same,
+    #[default]
+    InitialState
 }
 
 impl GraphErBrain {
@@ -163,6 +164,7 @@ impl eframe::App for GraphErBrain {
                     Zoom::Increase => Vec2::new(2., 2.),
                     Zoom::Decrease => Vec2::new(0.5, 0.5),
                     Zoom::Same => Vec2::new(1., 1.),
+                    Zoom::InitialState => Vec2::new(0.25, 0.25),
                 };
 
                 plot_ui.zoom_bounds(
